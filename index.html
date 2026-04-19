@@ -622,35 +622,68 @@
     ];
 
     const CRYPTO_WATCHLIST = [
-      'BTC-USD','ETH-USD','SOL-USD','XRP-USD','DOGE-USD',
-      'ADA-USD','AVAX-USD','LINK-USD','DOT-USD','MATIC-USD',
-      'LTC-USD','BCH-USD','UNI7083-USD','ATOM-USD','NEAR-USD',
-      'FIL-USD','ALGO-USD','ICP-USD','HBAR-USD','VET-USD'
+      'BINANCE:BTCUSDT','BINANCE:ETHUSDT','BINANCE:SOLUSDT','BINANCE:XRPUSDT','BINANCE:DOGEUSDT',
+      'BINANCE:ADAUSDT','BINANCE:AVAXUSDT','BINANCE:LINKUSDT','BINANCE:DOTUSDT','BINANCE:MATICUSDT',
+      'BINANCE:LTCUSDT','BINANCE:BCHUSDT','BINANCE:UNIUSDT','BINANCE:ATOMUSDT','BINANCE:NEARUSDT',
+      'BINANCE:FILUSDT','BINANCE:ALGOUSDT','BINANCE:ICPUSDT','BINANCE:HBARUSDT','BINANCE:VETUSDT'
     ];
 
-    // ---- FETCH ----
-    async function fetchQuote(ticker) {
+    const CRYPTO_NAMES = {
+      'BINANCE:BTCUSDT':'Bitcoin','BINANCE:ETHUSDT':'Ethereum','BINANCE:SOLUSDT':'Solana',
+      'BINANCE:XRPUSDT':'XRP','BINANCE:DOGEUSDT':'Dogecoin','BINANCE:ADAUSDT':'Cardano',
+      'BINANCE:AVAXUSDT':'Avalanche','BINANCE:LINKUSDT':'Chainlink','BINANCE:DOTUSDT':'Polkadot',
+      'BINANCE:MATICUSDT':'Polygon','BINANCE:LTCUSDT':'Litecoin','BINANCE:BCHUSDT':'Bitcoin Cash',
+      'BINANCE:UNIUSDT':'Uniswap','BINANCE:ATOMUSDT':'Cosmos','BINANCE:NEARUSDT':'NEAR Protocol',
+      'BINANCE:FILUSDT':'Filecoin','BINANCE:ALGOUSDT':'Algorand','BINANCE:ICPUSDT':'Internet Computer',
+      'BINANCE:HBARUSDT':'Hedera','BINANCE:VETUSDT':'VeChain'
+    };
+
+    const FINNHUB_KEY = 'd7ik969r01qn2qaucdf0d7ik969r01qn2qaucdfg';
+
+    // ---- FETCH via Finnhub ----
+    async function fetchQuote(ticker, isCrypto) {
       try {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=3mo`;
-        const r = await fetch(url);
-        const j = await r.json();
-        const result = j?.chart?.result?.[0];
-        if (!result) return null;
+        // Get current quote
+        const qUrl = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${FINNHUB_KEY}`;
+        const qRes = await fetch(qUrl);
+        const q = await qRes.json();
+        if (!q || !q.c) return null;
 
-        const meta = result.meta;
-        const closes = result.indicators?.quote?.[0]?.close?.filter(v => v != null) || [];
-        if (closes.length < 15) return null;
-
-        const price     = meta.regularMarketPrice;
-        const prevClose = meta.regularMarketPreviousClose;
+        const price     = q.c;
+        const prevClose = q.pc;
         const change    = price - prevClose;
         const changePct = (change / prevClose) * 100;
-        const name      = meta.shortName || meta.longName || ticker;
-        const volume    = meta.regularMarketVolume;
-        const mktCap    = meta.marketCap;
-        const rsi       = calcRSI(closes, 14);
 
-        return { ticker, name, price, change, changePct, rsi, volume, mktCap };
+        // Get candles for RSI (90 days of daily candles)
+        const to   = Math.floor(Date.now() / 1000);
+        const from = to - 90 * 86400;
+        const cUrl = `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=D&from=${from}&to=${to}&token=${FINNHUB_KEY}`;
+        const cRes = await fetch(cUrl);
+        const c = await cRes.json();
+        if (!c || c.s !== 'ok' || !c.c || c.c.length < 15) return null;
+
+        const closes = c.c;
+        const rsi = calcRSI(closes, 14);
+
+        // Get profile for name/mktcap (stocks only, skip for crypto)
+        let name = ticker, mktCap = null, volume = q.v || null;
+        if (!isCrypto) {
+          try {
+            const pUrl = `https://finnhub.io/api/v1/stock/profile2?symbol=${encodeURIComponent(ticker)}&token=${FINNHUB_KEY}`;
+            const pRes = await fetch(pUrl);
+            const p = await pRes.json();
+            name   = p.name || ticker;
+            mktCap = p.marketCapitalization ? p.marketCapitalization * 1e6 : null;
+          } catch {}
+        } else {
+          name = CRYPTO_NAMES[ticker] || ticker.replace('BINANCE:','').replace('USDT','');
+        }
+
+        const displayTicker = isCrypto
+          ? ticker.replace('BINANCE:','').replace('USDT','')
+          : ticker;
+
+        return { ticker: displayTicker, name, price, change, changePct, rsi, volume, mktCap };
       } catch { return null; }
     }
 
@@ -736,14 +769,14 @@
 
     async function loadSection(watchlist, gridId, isCrypto) {
       const grid = document.getElementById(gridId);
-      const BATCH = 10;
+      const BATCH = 5;
       let results = [];
 
       for (let i = 0; i < watchlist.length; i += BATCH) {
         const batch = watchlist.slice(i, i + BATCH);
-        const fetched = await Promise.all(batch.map(fetchQuote));
+        const fetched = await Promise.all(batch.map(t => fetchQuote(t, isCrypto)));
         results = results.concat(fetched.filter(Boolean));
-        if (i + BATCH < watchlist.length) await new Promise(r => setTimeout(r, 250));
+        if (i + BATCH < watchlist.length) await new Promise(r => setTimeout(r, 1200));
       }
 
       const oversold = results
