@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FartDollar.com — Today's Stinky Stocks & Crypto</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #222222;
+      --border: #333333;
+      --text: #f0f0f0;
+      --text-muted: #999999;
+      --text-dim: #666666;
+      --green: #22c55e;
+      --red: #ef4444;
+      --gold: #f5c842;
+      --stink: #a3e635;
+      --crypto-accent: #f97316;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      padding-bottom: 60px;
+    }
+
+    /* ---- MASTHEAD ---- */
+    .masthead {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 32px 24px 24px;
+      text-align: center;
+    }
+
+    .tagline-top {
+      font-size: 10px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .site-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(52px, 11vw, 104px);
+      font-weight: 900;
+      color: var(--text);
+      line-height: 0.9;
+      letter-spacing: -3px;
+      animation: titlePop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes titlePop {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .dollar-sign { color: var(--stink); }
+
+    .tagline-bottom {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .waft {
+      display: inline-block;
+      animation: waft 2.5s ease-in-out infinite;
+    }
+    @keyframes waft {
+      0%,100% { transform: rotate(-8deg) translateY(0); }
+      50%      { transform: rotate(8deg)  translateY(-5px); }
+    }
+
+    /* ---- DATE BAR ---- */
+    .datebar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* ---- EXPLAINER ---- */
+    .explainer {
+      max-width: 680px;
+      margin: 32px auto 0;
+      padding: 0 24px;
+      text-align: center;
+    }
+
+    .explainer p {
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 14px 20px;
+      background: var(--surface);
+      border-radius: 4px;
+    }
+
+    /* ---- CONTAINER ---- */
+    .container {
+      max-width: 960px;
+      margin: 36px auto 0;
+      padding: 0 24px;
+    }
+
+    .section-header {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header.crypto-header {
+      margin-top: 48px;
+      border-top-color: var(--crypto-accent);
+    }
+
+    .section-header .pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: var(--stink);
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 2px;
+    }
+
+    .section-header .pill.crypto {
+      background: var(--crypto-accent);
+    }
+
+    /* ---- GRID ---- */
+    .stocks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 16px;
+    }
+
+    /* ---- CARDS ---- */
+    .stock-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      position: relative;
+      transition: border-color 0.15s, transform 0.15s;
+      animation: cardIn 0.35s ease both;
+    }
+
+    .stock-card:hover {
+      border-color: var(--stink);
+      transform: translateY(-2px);
+    }
+
+    .stock-card.crypto-card:hover {
+      border-color: var(--crypto-accent);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stock-card:nth-child(1)  { animation-delay: 0.04s; }
+    .stock-card:nth-child(2)  { animation-delay: 0.08s; }
+    .stock-card:nth-child(3)  { animation-delay: 0.12s; }
+    .stock-card:nth-child(4)  { animation-delay: 0.16s; }
+    .stock-card:nth-child(5)  { animation-delay: 0.20s; }
+    .stock-card:nth-child(6)  { animation-delay: 0.24s; }
+    .stock-card:nth-child(7)  { animation-delay: 0.28s; }
+    .stock-card:nth-child(8)  { animation-delay: 0.32s; }
+    .stock-card:nth-child(9)  { animation-delay: 0.36s; }
+    .stock-card:nth-child(10) { animation-delay: 0.40s; }
+
+    .stink-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--stink);
+      border: 1px solid var(--stink);
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+
+    .stink-badge.crypto { color: var(--crypto-accent); border-color: var(--crypto-accent); }
+
+    .stock-ticker {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      padding-right: 70px;
+    }
+
+    .stock-name {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 3px;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stock-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .stock-price {
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .stock-change {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--red);
+    }
+    .stock-change.up { color: var(--green); }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 10px 0;
+    }
+
+    .stock-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .meta-item label {
+      display: block;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 2px;
+    }
+
+    .meta-item span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .rsi-wrap { grid-column: 1 / -1; }
+
+    .rsi-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .rsi-bar {
+      height: 5px;
+      background: var(--surface2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .rsi-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(to right, var(--green), var(--gold), var(--red));
+    }
+
+    .verdict {
+      margin-top: 12px;
+      font-size: 11px;
+      font-style: italic;
+      color: var(--text-muted);
+      line-height: 1.5;
+      border-left: 2px solid var(--border);
+      padding-left: 10px;
+    }
+
+    /* ---- LOADING ---- */
+    .loading-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .spin { display: inline-block; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- FART BTN ---- */
+    /* ---- INVEST WIDGET ---- */
+    .invest-widget {
+      margin: 40px auto 0;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .ticker-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .ticker-symbol {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--text);
+    }
+
+    .ticker-price {
+      font-size: 28px;
+      font-weight: 500;
+      color: var(--stink);
+      transition: color 0.15s;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .ticker-change {
+      font-size: 12px;
+      color: var(--green);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .ticker-change.flash { opacity: 1; }
+
+    .invest-btn {
+      display: block;
+      width: 100%;
+      background: var(--stink);
+      color: #000;
+      border: none;
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 14px 24px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s, transform 0.1s;
+      margin-bottom: 10px;
+    }
+    .invest-btn:hover  { background: #c8f035; }
+    .invest-btn:active { transform: scale(0.97); }
+
+    .invest-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+
+    /* ---- COUNTDOWN ---- */
+    .countdown-widget {
+      margin: 24px auto 0;
+      max-width: 420px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 24px;
+      text-align: center;
+    }
+    .countdown-label {
+      font-size: 9px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .countdown-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .countdown-blocks {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .cd-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 14px;
+      min-width: 60px;
+    }
+    .cd-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--red);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .cd-unit {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .countdown-sub {
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+      margin-top: 12px;
+      font-style: italic;
+    }
+    .puff {
+      position: fixed;
+      pointer-events: none;
+      font-size: 30px;
+      animation: puff 1.3s ease-out forwards;
+      z-index: 999;
+    }
+    @keyframes puff {
+      0%   { opacity: 1; transform: scale(0.5) translateY(0); }
+      100% { opacity: 0; transform: scale(2.2) translateY(-70px); }
+    }
+
+    /* ---- FOOTER ---- */
+    footer {
+      max-width: 960px;
+      margin: 48px auto 0;
+      padding: 20px 24px 0;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      letter-spacing: 0.3px;
+      color: var(--text-dim);
+      text-align: center;
+      line-height: 1.9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="masthead">
+    <div class="tagline-top">Financial Odor Detection — Est. 2025</div>
+    <div class="site-title">FART<span class="dollar-sign">$</span></div>
+    <div class="tagline-bottom">
+      Stocks &amp; Crypto That Stink Right Now (But Probably Won't Forever)
+      <span class="waft">💨</span>
+    </div>
+  </div>
+
+  <div class="datebar" id="datebar">Loading market data...</div>
+
+  <div class="explainer">
+    <p>
+      Stocks and crypto with an RSI under 35 are considered oversold — beaten down by the market and potentially due for a bounce.
+      Not financial advice. This is a fart website. 💩
+    </p>
+  </div>
+
+  <div class="container">
+
+    <div class="section-header">
+      <span>💩</span> Today's Stinky Stocks
+      <span class="pill">RSI &lt; 35</span>
+    </div>
+    <div id="stocks-grid" class="stocks-grid">
+      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the market...</div>
+    </div>
+
+    <div class="section-header crypto-header">
+      <span>🪙</span> Stinkin' Rich
+      <span class="pill crypto">RSI &lt; 35</span>
+    </div>
+    <div id="crypto-grid" class="stocks-grid">
+      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the blockchain...</div>
+    </div>
+
+    <div class="invest-widget">
+      <div class="ticker-row">
+        <div class="ticker-symbol">💨 FART$</div>
+        <div class="ticker-price" id="fart-price">$0.000</div>
+        <div class="ticker-change" id="fart-change">▲ +$0.001</div>
+      </div>
+      <button class="invest-btn" onclick="invest()">💰 INVEST</button>
+      <div class="invest-sub">Not real money. Very real farts.</div>
+    </div>
+
+    <div class="countdown-widget">
+      <div class="countdown-label">🚀 Official Launch Countdown</div>
+      <div class="countdown-title">FartDollar.com Goes Live In...</div>
+      <div class="countdown-blocks">
+        <div class="cd-block"><div class="cd-num" id="cd-d">00</div><div class="cd-unit">Days</div></div>
+        <div class="cd-block"><div class="cd-num" id="cd-h">00</div><div class="cd-unit">Hours</div></div>
+        <div class="cd-block"><div class="cd-num" id="cd-m">00</div><div class="cd-unit">Mins</div></div>
+        <div class="cd-block"><div class="cd-num" id="cd-s">00</div><div class="cd-unit">Secs</div></div>
+      </div>
+      <div class="countdown-sub">Resets every Monday. We are always almost ready. 💨</div>
+    </div>
+  </div>
+
+  <footer>
+    FartDollar.com is not a registered investment advisor. Nothing on this site constitutes financial advice.
+    RSI data is for entertainment purposes only. Assets can go down further — a lot further.
+    Past stinkiness is no guarantee of future freshness. Always do your own research. Or don't. We're a fart website.
+  </footer>
+
+  <script>
+    // ---- WEB AUDIO FART ----
+    function playFart() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const dur = 0.85;
+      const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) {
+        const t = i / ctx.sampleRate;
+        const freq = 85 + 55 * Math.exp(-t * 4) + 18 * Math.sin(t * 38);
+        d[i] = (Math.random() * 2 - 1) * 0.55 * Math.exp(-t * 3)
+              + Math.sin(2 * Math.PI * freq * t) * 0.38 * Math.exp(-t * 2.4);
+      }
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.75, 0);
+      gain.gain.exponentialRampToValueAtTime(0.001, dur);
+      src.connect(gain); gain.connect(ctx.destination); src.start();
+
+      ['💨','😤','🌫️','💨','🤢'].forEach((e, i) => {
+        setTimeout(() => {
+          const el = document.createElement('div');
+          el.className = 'puff'; el.textContent = e;
+          el.style.left = (15 + Math.random() * 65) + 'vw';
+          el.style.top  = (15 + Math.random() * 55) + 'vh';
+          document.body.appendChild(el);
+          setTimeout(() => el.remove(), 1400);
+        }, i * 130);
+      });
+    }
+
+    // ---- DATE ----
+    document.getElementById('datebar').textContent =
+      new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' })
+      + ' — Refreshes on every load';
+
+    // ---- VERDICTS ----
+    const STOCK_VERDICTS = [
+      "Has been through worse. Probably.",
+      "Down bad, but the fundamentals haven't changed.",
+      "The market overreacted. At least that's the hope.",
+      "Smells like an opportunity if you can hold your nose.",
+      "Everyone hates it right now. Contrarian catnip.",
+      "Beat up, not beaten. (Allegedly.)",
+      "Technically oversold. Emotionally, who knows.",
+      "The chart looks like a ski slope. Time to buy a lift ticket?",
+      "Still standing. Just barely.",
+      "This too shall pass. Hopefully.",
+    ];
+
+    const CRYPTO_VERDICTS = [
+      "The blockchain is crying. Probably.",
+      "Web3 believers are buying this dip. Or so they claim.",
+      "Down bad. But it's crypto, so who even knows.",
+      "Your degenerate uncle would call this a gift.",
+      "If you squint at the chart, it looks like a bottom.",
+      "Oversold or just... over? That's the question.",
+      "HODLers are sweating. Opportunity awaits?",
+      "The vibes are terrible. The RSI agrees.",
+      "Even the memes have gotten quieter.",
+      "Buy the stink, sell the rally. (Not advice.)",
+    ];
+
+    // ---- WATCHLISTS ----
+    const STOCK_WATCHLIST = [
+      'AAPL','MSFT','GOOGL','AMZN','META','NVDA','TSLA','AMD','INTC','NFLX',
+      'DIS','PYPL','SQ','SHOP','SNAP','UBER','LYFT','SPOT','PINS','RBLX',
+      'COIN','HOOD','SOFI','PLTR','RIVN','LCID','XPEV','NIO','BABA','JD',
+      'PFE','MRNA','BNTX','CVS','WBA','KO','PEP','MCD','SBUX','NKE',
+      'F','GM','BAC','C','WFC','GS','JPM','XOM','CVX','T'
+    ];
+
+    const CRYPTO_WATCHLIST = [
+      'BTC-USD','ETH-USD','SOL-USD','XRP-USD','DOGE-USD',
+      'ADA-USD','AVAX-USD','LINK-USD','DOT-USD','MATIC-USD',
+      'LTC-USD','BCH-USD','UNI7083-USD','ATOM-USD','NEAR-USD',
+      'FIL-USD','ALGO-USD','ICP-USD','HBAR-USD','VET-USD'
+    ];
+
+    // ---- FETCH ----
+    async function fetchQuote(ticker) {
+      try {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=3mo`;
+        const r = await fetch(url);
+        const j = await r.json();
+        const result = j?.chart?.result?.[0];
+        if (!result) return null;
+
+        const meta = result.meta;
+        const closes = result.indicators?.quote?.[0]?.close?.filter(v => v != null) || [];
+        if (closes.length < 15) return null;
+
+        const price     = meta.regularMarketPrice;
+        const prevClose = meta.regularMarketPreviousClose;
+        const change    = price - prevClose;
+        const changePct = (change / prevClose) * 100;
+        const name      = meta.shortName || meta.longName || ticker;
+        const volume    = meta.regularMarketVolume;
+        const mktCap    = meta.marketCap;
+        const rsi       = calcRSI(closes, 14);
+
+        return { ticker, name, price, change, changePct, rsi, volume, mktCap };
+      } catch { return null; }
+    }
+
+    function calcRSI(closes, period) {
+      if (closes.length < period + 1) return null;
+      let gains = 0, losses = 0;
+      for (let i = closes.length - period; i < closes.length; i++) {
+        const diff = closes[i] - closes[i - 1];
+        if (diff > 0) gains += diff; else losses += Math.abs(diff);
+      }
+      const ag = gains / period, al = losses / period;
+      if (al === 0) return 100;
+      return 100 - (100 / (1 + ag / al));
+    }
+
+    function fmt(n) {
+      if (!n) return '—';
+      if (n >= 1e12) return '$' + (n/1e12).toFixed(1) + 'T';
+      if (n >= 1e9)  return '$' + (n/1e9).toFixed(1)  + 'B';
+      if (n >= 1e6)  return '$' + (n/1e6).toFixed(1)  + 'M';
+      return '$' + n.toLocaleString();
+    }
+
+    function fmtVol(n) {
+      if (!n) return '—';
+      if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+      if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n/1e3).toFixed(0) + 'K';
+      return n.toString();
+    }
+
+    function fmtPrice(p, isCrypto) {
+      if (!p) return '—';
+      if (isCrypto && p < 1)   return '$' + p.toFixed(4);
+      if (isCrypto && p < 100) return '$' + p.toFixed(2);
+      return '$' + p.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function renderCard(stock, idx, isCrypto) {
+      const verdicts = isCrypto ? CRYPTO_VERDICTS : STOCK_VERDICTS;
+      const isUp = stock.change >= 0;
+      const rsiPct = Math.min(100, Math.max(0, stock.rsi || 0));
+      const verdict = verdicts[idx % verdicts.length];
+      const cryptoClass = isCrypto ? ' crypto-card' : '';
+      const badgeClass  = isCrypto ? ' crypto' : '';
+      const displayTicker = stock.ticker.replace('-USD', '');
+
+      return `
+        <div class="stock-card${cryptoClass}">
+          <div class="stink-badge${badgeClass}">💩 Oversold</div>
+          <div class="stock-ticker">${displayTicker}</div>
+          <div class="stock-name">${stock.name}</div>
+          <div class="stock-price-row">
+            <div class="stock-price">${fmtPrice(stock.price, isCrypto)}</div>
+            <div class="stock-change ${isUp ? 'up' : ''}">
+              ${isUp ? '▲' : '▼'} ${Math.abs(stock.changePct).toFixed(2)}%
+            </div>
+          </div>
+          <hr class="divider"/>
+          <div class="stock-meta">
+            <div class="meta-item">
+              <label>Mkt Cap</label>
+              <span>${fmt(stock.mktCap)}</span>
+            </div>
+            <div class="meta-item">
+              <label>Volume</label>
+              <span>${fmtVol(stock.volume)}</span>
+            </div>
+            <div class="rsi-wrap">
+              <div class="rsi-label-row">
+                <span>RSI(14): ${stock.rsi?.toFixed(1) ?? '—'}</span>
+                <span>Oversold → Overbought</span>
+              </div>
+              <div class="rsi-bar">
+                <div class="rsi-fill" style="width: ${rsiPct}%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="verdict">${verdict}</div>
+        </div>
+      `;
+    }
+
+    async function loadSection(watchlist, gridId, isCrypto) {
+      const grid = document.getElementById(gridId);
+      const BATCH = 10;
+      let results = [];
+
+      for (let i = 0; i < watchlist.length; i += BATCH) {
+        const batch = watchlist.slice(i, i + BATCH);
+        const fetched = await Promise.all(batch.map(fetchQuote));
+        results = results.concat(fetched.filter(Boolean));
+        if (i + BATCH < watchlist.length) await new Promise(r => setTimeout(r, 250));
+      }
+
+      const oversold = results
+        .filter(s => s.rsi !== null && s.rsi < 35)
+        .sort((a, b) => a.rsi - b.rsi)
+        .slice(0, 9);
+
+      if (oversold.length === 0) {
+        const fallback = results
+          .filter(s => s.rsi !== null)
+          .sort((a, b) => a.rsi - b.rsi)
+          .slice(0, 6);
+
+        if (fallback.length === 0) {
+          grid.innerHTML = `<div class="loading-state">😤 Data unavailable right now. Try refreshing.</div>`;
+          return;
+        }
+
+        const note = isCrypto
+          ? "Nothing's truly oversold in crypto today — showing the least-loved coins from our watchlist."
+          : "Nothing's truly oversold today — showing the least-loved stocks from our watchlist.";
+
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;font-size:11px;color:var(--text-dim);font-style:italic;margin-bottom:4px;">
+            💡 ${note}
+          </div>
+          ${fallback.map((s, i) => renderCard(s, i, isCrypto)).join('')}
+        `;
+        return;
+      }
+
+      grid.innerHTML = oversold.map((s, i) => renderCard(s, i, isCrypto)).join('');
+    }
+
+    // ---- INVEST TICKER ----
+    let fartPrice = 0.000;
+
+    function invest() {
+      fartPrice = Math.round((fartPrice + 0.001) * 1000) / 1000;
+      const priceEl  = document.getElementById('fart-price');
+      const changeEl = document.getElementById('fart-change');
+      priceEl.textContent = '$' + fartPrice.toFixed(3);
+      changeEl.classList.remove('flash');
+      void changeEl.offsetWidth; // reflow to restart animation
+      changeEl.classList.add('flash');
+      setTimeout(() => changeEl.classList.remove('flash'), 800);
+      playFart();
+    }
+
+
+    // ---- COUNTDOWN (resets every Monday) ----
+    function updateCountdown() {
+      const now = new Date();
+      const nextMonday = new Date(now);
+      const day = now.getDay(); // 0=Sun, 1=Mon...
+      const daysUntilMonday = day === 1 ? 7 : (8 - day) % 7 || 7;
+      nextMonday.setDate(now.getDate() + daysUntilMonday);
+      nextMonday.setHours(0, 0, 0, 0);
+      const diff = nextMonday - now;
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      document.getElementById("cd-d").textContent = String(d).padStart(2,"0");
+      document.getElementById("cd-h").textContent = String(h).padStart(2,"0");
+      document.getElementById("cd-m").textContent = String(m).padStart(2,"0");
+      document.getElementById("cd-s").textContent = String(s).padStart(2,"0");
+    }
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+    loadSection(STOCK_WATCHLIST, 'stocks-grid', false);
+    loadSection(CRYPTO_WATCHLIST, 'crypto-grid', true);
+  </script>
+</body>
+</html>
