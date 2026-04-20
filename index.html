@@ -660,14 +660,14 @@
       { ticker: 'LTC',  name: 'Litecoin' },
     ];
 
-    const POLY_KEY = 'uqV0UrgYGRmx0b2CG7XUyuDsLj2h6HIE';
+
 
     // Use Polygon's native RSI indicator + snapshot endpoints — 2 small calls per ticker
     async function fetchStock({ ticker, name }) {
       try {
         const [snapRes, rsiRes] = await Promise.all([
-          fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apiKey=${POLY_KEY}`),
-          fetch(`https://api.polygon.io/v1/indicators/rsi/${ticker}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=${POLY_KEY}`)
+          fetch(`https://fartdollar.zhodgkin14.workers.dev/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apiKey=proxy`),
+          fetch(`https://fartdollar.zhodgkin14.workers.dev/v1/indicators/rsi/${ticker}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=proxy`)
         ]);
         const snapJson = await snapRes.json();
         const rsiJson  = await rsiRes.json();
@@ -691,8 +691,8 @@
       try {
         const symbol = `X:${ticker}USD`;
         const [snapRes, rsiRes] = await Promise.all([
-          fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/crypto/tickers/${symbol}?apiKey=${POLY_KEY}`),
-          fetch(`https://api.polygon.io/v1/indicators/rsi/${symbol}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=${POLY_KEY}`)
+          fetch(`https://fartdollar.zhodgkin14.workers.dev/v2/snapshot/locale/global/markets/crypto/tickers/${symbol}?apiKey=proxy`),
+          fetch(`https://fartdollar.zhodgkin14.workers.dev/v1/indicators/rsi/${symbol}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=proxy`)
         ]);
         const snapJson = await snapRes.json();
         const rsiJson  = await rsiRes.json();
