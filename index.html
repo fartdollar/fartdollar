@@ -656,28 +656,26 @@
 
     const POLY_KEY = 'uqV0UrgYGRmx0b2CG7XUyuDsLj2h6HIE';
 
-    // Fetch 60 days of daily closes from Polygon, calculate RSI ourselves
+    // Use Polygon's native RSI indicator + snapshot endpoints — 2 small calls per ticker
     async function fetchStock({ ticker, name }) {
       try {
-        const to   = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+        const [snapRes, rsiRes] = await Promise.all([
+          fetch(`https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers/${ticker}?apiKey=${POLY_KEY}`),
+          fetch(`https://api.polygon.io/v1/indicators/rsi/${ticker}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=${POLY_KEY}`)
+        ]);
+        const snapJson = await snapRes.json();
+        const rsiJson  = await rsiRes.json();
 
-        // Aggregates (daily candles)
-        const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
-        const aggRes = await fetch(aggUrl);
-        const aggJson = await aggRes.json();
-        if (!aggJson.results || aggJson.results.length < 15) return null;
+        const snap = snapJson?.ticker;
+        const rsiVal = rsiJson?.results?.values?.[0]?.value;
+        if (!snap || rsiVal == null) return null;
 
-        const results  = aggJson.results;
-        const closes   = results.map(r => r.c);
-        const latest   = results[results.length - 1];
-        const prev     = results[results.length - 2];
-        const price    = latest.c;
-        const prevClose = prev.c;
-        const change   = price - prevClose;
+        const price     = snap.day?.c || snap.prevDay?.c;
+        const prevClose = snap.prevDay?.c;
+        const change    = price - prevClose;
         const changePct = (change / prevClose) * 100;
-        const volume   = latest.v;
-        const rsi      = calcRSI(closes, 14);
+        const volume    = snap.day?.v || snap.prevDay?.v;
+        const rsi       = rsiVal;
 
         return { ticker, name, price, change, changePct, rsi, volume, mktCap: null };
       } catch { return null; }
@@ -685,40 +683,27 @@
 
     async function fetchCrypto({ ticker, name }) {
       try {
-        const to   = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
         const symbol = `X:${ticker}USD`;
+        const [snapRes, rsiRes] = await Promise.all([
+          fetch(`https://api.polygon.io/v2/snapshot/locale/global/markets/crypto/tickers/${symbol}?apiKey=${POLY_KEY}`),
+          fetch(`https://api.polygon.io/v1/indicators/rsi/${symbol}?timespan=day&adjusted=true&window=14&series_type=close&order=desc&limit=1&apiKey=${POLY_KEY}`)
+        ]);
+        const snapJson = await snapRes.json();
+        const rsiJson  = await rsiRes.json();
 
-        const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
-        const aggRes = await fetch(aggUrl);
-        const aggJson = await aggRes.json();
-        if (!aggJson.results || aggJson.results.length < 15) return null;
+        const snap   = snapJson?.ticker;
+        const rsiVal = rsiJson?.results?.values?.[0]?.value;
+        if (!snap || rsiVal == null) return null;
 
-        const results   = aggJson.results;
-        const closes    = results.map(r => r.c);
-        const latest    = results[results.length - 1];
-        const prev      = results[results.length - 2];
-        const price     = latest.c;
-        const prevClose = prev.c;
+        const price     = snap.day?.c || snap.prevDay?.c;
+        const prevClose = snap.prevDay?.c;
         const change    = price - prevClose;
         const changePct = (change / prevClose) * 100;
-        const volume    = latest.v;
-        const rsi       = calcRSI(closes, 14);
+        const volume    = snap.day?.v || snap.prevDay?.v;
+        const rsi       = rsiVal;
 
         return { ticker, name, price, change, changePct, rsi, volume, mktCap: null };
       } catch { return null; }
-    }
-
-    function calcRSI(closes, period) {
-      if (closes.length < period + 1) return null;
-      let gains = 0, losses = 0;
-      for (let i = closes.length - period; i < closes.length; i++) {
-        const diff = closes[i] - closes[i - 1];
-        if (diff > 0) gains += diff; else losses += Math.abs(diff);
-      }
-      const ag = gains / period, al = losses / period;
-      if (al === 0) return 100;
-      return 100 - (100 / (1 + ag / al));
     }
 
     function fmt(n) {
