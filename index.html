@@ -660,7 +660,7 @@
     async function fetchStock({ ticker, name }) {
       try {
         const to   = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
         // Aggregates (daily candles)
         const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
@@ -679,23 +679,14 @@
         const volume   = latest.v;
         const rsi      = calcRSI(closes, 14);
 
-        // Get market cap from ticker details
-        let mktCap = null;
-        try {
-          const detUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apiKey=${POLY_KEY}`;
-          const detRes = await fetch(detUrl);
-          const detJson = await detRes.json();
-          mktCap = detJson.results?.market_cap || null;
-        } catch {}
-
-        return { ticker, name, price, change, changePct, rsi, volume, mktCap };
+        return { ticker, name, price, change, changePct, rsi, volume, mktCap: null };
       } catch { return null; }
     }
 
     async function fetchCrypto({ ticker, name }) {
       try {
         const to   = new Date().toISOString().slice(0, 10);
-        const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
         const symbol = `X:${ticker}USD`;
 
         const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
@@ -875,8 +866,11 @@
     }
     updateCountdown();
     setInterval(updateCountdown, 1000);
-    loadSection(STOCK_WATCHLIST, 'stocks-grid', false);
-    loadSection(CRYPTO_WATCHLIST, 'crypto-grid', true);
+    // Load both sections simultaneously
+    Promise.all([
+      loadSection(STOCK_WATCHLIST, 'stocks-grid', false),
+      loadSection(CRYPTO_WATCHLIST, 'crypto-grid', true)
+    ]);
   </script>
 </body>
 </html>
