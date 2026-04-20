@@ -508,7 +508,7 @@
       <span class="pill">RSI &lt; 35</span>
     </div>
     <div id="stocks-grid" class="stocks-grid">
-      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the market... (this takes ~30 sec)</div>
+      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the market...</div>
     </div>
 
     <div class="section-header crypto-header">
@@ -516,7 +516,7 @@
       <span class="pill crypto">RSI &lt; 35</span>
     </div>
     <div id="crypto-grid" class="stocks-grid">
-      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the blockchain... (this takes ~30 sec)</div>
+      <div class="loading-state"><span class="spin">⏳</span>&nbsp; Sniffing the blockchain...</div>
     </div>
 
     <div class="invest-widget">
@@ -531,7 +531,7 @@
 
     <div class="countdown-widget">
       <div class="countdown-label">🚀 Official Launch Countdown</div>
-      <div class="countdown-title">FartDollar.com Goes Live In...</div>
+      <div class="countdown-title">Something might be happening!</div>
       <div class="countdown-blocks">
         <div class="cd-block"><div class="cd-num" id="cd-d">00</div><div class="cd-unit">Days</div></div>
         <div class="cd-block"><div class="cd-num" id="cd-h">00</div><div class="cd-unit">Hours</div></div>
@@ -612,88 +612,109 @@
       "Buy the stink, sell the rally. (Not advice.)",
     ];
 
-    // ---- WATCHLISTS (kept small to respect API limits) ----
-    // Alpha Vantage free: 25 req/day. Each ticker = 1 call (RSI endpoint returns RSI + price).
-    // We fetch 10 stocks + 8 crypto = 18 calls total, leaving headroom.
+    // ---- WATCHLISTS ----
     const STOCK_WATCHLIST = [
       { ticker: 'AAPL',  name: 'Apple' },
-      { ticker: 'TSLA',  name: 'Tesla' },
+      { ticker: 'MSFT',  name: 'Microsoft' },
+      { ticker: 'GOOGL', name: 'Alphabet' },
+      { ticker: 'AMZN',  name: 'Amazon' },
+      { ticker: 'META',  name: 'Meta' },
       { ticker: 'NVDA',  name: 'NVIDIA' },
-      { ticker: 'AMD',   name: 'Advanced Micro Devices' },
+      { ticker: 'TSLA',  name: 'Tesla' },
+      { ticker: 'AMD',   name: 'AMD' },
       { ticker: 'INTC',  name: 'Intel' },
+      { ticker: 'NFLX',  name: 'Netflix' },
       { ticker: 'DIS',   name: 'Disney' },
       { ticker: 'PYPL',  name: 'PayPal' },
       { ticker: 'SNAP',  name: 'Snap' },
-      { ticker: 'NIO',   name: 'NIO Inc.' },
+      { ticker: 'UBER',  name: 'Uber' },
+      { ticker: 'COIN',  name: 'Coinbase' },
+      { ticker: 'PLTR',  name: 'Palantir' },
+      { ticker: 'SHOP',  name: 'Shopify' },
+      { ticker: 'NIO',   name: 'NIO' },
       { ticker: 'BABA',  name: 'Alibaba' },
+      { ticker: 'PFE',   name: 'Pfizer' },
+      { ticker: 'BAC',   name: 'Bank of America' },
+      { ticker: 'XOM',   name: 'ExxonMobil' },
+      { ticker: 'F',     name: 'Ford' },
+      { ticker: 'GM',    name: 'GM' },
+      { ticker: 'NKE',   name: 'Nike' },
     ];
 
     const CRYPTO_WATCHLIST = [
-      { ticker: 'BTC',  name: 'Bitcoin',   sym: 'BTCUSD' },
-      { ticker: 'ETH',  name: 'Ethereum',  sym: 'ETHUSD' },
-      { ticker: 'SOL',  name: 'Solana',    sym: 'SOLUSD' },
-      { ticker: 'XRP',  name: 'XRP',       sym: 'XRPUSD' },
-      { ticker: 'DOGE', name: 'Dogecoin',  sym: 'DOGEUSD' },
-      { ticker: 'ADA',  name: 'Cardano',   sym: 'ADAUSD' },
-      { ticker: 'AVAX', name: 'Avalanche', sym: 'AVAXUSD' },
-      { ticker: 'LINK', name: 'Chainlink', sym: 'LINKUSD' },
+      { ticker: 'BTC',  name: 'Bitcoin' },
+      { ticker: 'ETH',  name: 'Ethereum' },
+      { ticker: 'SOL',  name: 'Solana' },
+      { ticker: 'XRP',  name: 'XRP' },
+      { ticker: 'DOGE', name: 'Dogecoin' },
+      { ticker: 'ADA',  name: 'Cardano' },
+      { ticker: 'AVAX', name: 'Avalanche' },
+      { ticker: 'LINK', name: 'Chainlink' },
+      { ticker: 'DOT',  name: 'Polkadot' },
+      { ticker: 'LTC',  name: 'Litecoin' },
     ];
 
-    const AV_KEY = '4D2I8EO45JJCSTLV';
+    const POLY_KEY = 'uqV0UrgYGRmx0b2CG7XUyuDsLj2h6HIE';
 
-    // Alpha Vantage: fetch RSI(14) + daily quote in one call
+    // Fetch 60 days of daily closes from Polygon, calculate RSI ourselves
     async function fetchStock({ ticker, name }) {
       try {
-        // RSI endpoint also returns the latest closing price
-        const rsiUrl = `https://www.alphavantage.co/query?function=RSI&symbol=${ticker}&interval=daily&time_period=14&series_type=close&apikey=${AV_KEY}`;
-        const rsiRes = await fetch(rsiUrl);
-        const rsiJson = await rsiRes.json();
-        const rsiData = rsiJson['Technical Analysis: RSI'];
-        if (!rsiData) return null;
-        const latestDate = Object.keys(rsiData)[0];
-        const rsi = parseFloat(rsiData[latestDate]['RSI']);
+        const to   = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
 
-        // Daily quote for price/change/volume
-        const qUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${AV_KEY}`;
-        const qRes = await fetch(qUrl);
-        const qJson = await qRes.json();
-        const q = qJson['Global Quote'];
-        if (!q || !q['05. price']) return null;
+        // Aggregates (daily candles)
+        const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
+        const aggRes = await fetch(aggUrl);
+        const aggJson = await aggRes.json();
+        if (!aggJson.results || aggJson.results.length < 15) return null;
 
-        const price     = parseFloat(q['05. price']);
-        const prevClose = parseFloat(q['08. previous close']);
-        const change    = price - prevClose;
-        const changePct = parseFloat(q['10. change percent']);
-        const volume    = parseInt(q['06. volume']);
+        const results  = aggJson.results;
+        const closes   = results.map(r => r.c);
+        const latest   = results[results.length - 1];
+        const prev     = results[results.length - 2];
+        const price    = latest.c;
+        const prevClose = prev.c;
+        const change   = price - prevClose;
+        const changePct = (change / prevClose) * 100;
+        const volume   = latest.v;
+        const rsi      = calcRSI(closes, 14);
 
-        return { ticker, name, price, change, changePct, rsi, volume, mktCap: null };
+        // Get market cap from ticker details
+        let mktCap = null;
+        try {
+          const detUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apiKey=${POLY_KEY}`;
+          const detRes = await fetch(detUrl);
+          const detJson = await detRes.json();
+          mktCap = detJson.results?.market_cap || null;
+        } catch {}
+
+        return { ticker, name, price, change, changePct, rsi, volume, mktCap };
       } catch { return null; }
     }
 
-    async function fetchCrypto({ ticker, name, sym }) {
+    async function fetchCrypto({ ticker, name }) {
       try {
-        const url = `https://www.alphavantage.co/query?function=CRYPTO_INTRADAY&symbol=${ticker}&market=USD&interval=daily&apikey=${AV_KEY}`;
-        // Use RSI for crypto via the RSI endpoint with the crypto symbol
-        const rsiUrl = `https://www.alphavantage.co/query?function=RSI&symbol=${sym}&interval=daily&time_period=14&series_type=close&apikey=${AV_KEY}`;
-        const [rsiRes, qRes] = await Promise.all([
-          fetch(rsiUrl),
-          fetch(`https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${ticker}&to_currency=USD&apikey=${AV_KEY}`)
-        ]);
-        const rsiJson = await rsiRes.json();
-        const qJson   = await qRes.json();
+        const to   = new Date().toISOString().slice(0, 10);
+        const from = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+        const symbol = `X:${ticker}USD`;
 
-        const rsiData = rsiJson['Technical Analysis: RSI'];
-        const rate    = qJson['Realtime Currency Exchange Rate'];
-        if (!rsiData || !rate) return null;
+        const aggUrl = `https://api.polygon.io/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}?adjusted=true&sort=asc&limit=120&apiKey=${POLY_KEY}`;
+        const aggRes = await fetch(aggUrl);
+        const aggJson = await aggRes.json();
+        if (!aggJson.results || aggJson.results.length < 15) return null;
 
-        const latestDate = Object.keys(rsiData)[0];
-        const rsi        = parseFloat(rsiData[latestDate]['RSI']);
-        const price      = parseFloat(rate['5. Exchange Rate']);
-        const prevClose  = parseFloat(rate['5. Exchange Rate']); // no prev for this endpoint
-        const change     = 0;
-        const changePct  = 0;
+        const results   = aggJson.results;
+        const closes    = results.map(r => r.c);
+        const latest    = results[results.length - 1];
+        const prev      = results[results.length - 2];
+        const price     = latest.c;
+        const prevClose = prev.c;
+        const change    = price - prevClose;
+        const changePct = (change / prevClose) * 100;
+        const volume    = latest.v;
+        const rsi       = calcRSI(closes, 14);
 
-        return { ticker, name, price, change, changePct, rsi, volume: null, mktCap: null };
+        return { ticker, name, price, change, changePct, rsi, volume, mktCap: null };
       } catch { return null; }
     }
 
@@ -779,15 +800,12 @@
 
     async function loadSection(watchlist, gridId, isCrypto) {
       const grid = document.getElementById(gridId);
-      let results = [];
 
-      // Fetch one at a time with a delay to respect Alpha Vantage rate limits
-      for (let i = 0; i < watchlist.length; i++) {
-        const item = watchlist[i];
-        const result = isCrypto ? await fetchCrypto(item) : await fetchStock(item);
-        if (result) results.push(result);
-        if (i < watchlist.length - 1) await new Promise(r => setTimeout(r, 1500));
-      }
+      // Polygon has no per-call rate limits — fetch all in parallel
+      const fetched = await Promise.all(
+        watchlist.map(item => isCrypto ? fetchCrypto(item) : fetchStock(item))
+      );
+      let results = fetched.filter(Boolean);
 
       const oversold = results
         .filter(s => s.rsi !== null && s.rsi < 35)
