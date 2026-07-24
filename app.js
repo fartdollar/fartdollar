@@ -145,6 +145,38 @@ function getMarketCap(ticker) {
   });
 }
 
+// r/wallstreetbets mention counts, via the Worker's /wsb-mentions relay of
+// ApeWisdom's public API. One request for the whole top-tickers list, then
+// cross-referenced locally against our watchlists — no per-ticker calls.
+// Sentiment moves faster than daily bars, so a much shorter cache than the
+// ticker/market-cap caches.
+const WSB_TTL_MS = 20 * 60 * 1000;
+
+async function getWsbMentions() {
+  const key = 'fd_wsb_mentions';
+  try {
+    const cached = JSON.parse(localStorage.getItem(key));
+    if (cached && Date.now() - cached.ts < WSB_TTL_MS) return cached.value;
+  } catch { /* no usable cache entry */ }
+
+  const json = await fetchJSON(`${PROXY}/wsb-mentions`);
+  const map = {};
+  // Only numeric fields are kept — ApeWisdom's ticker is used purely as an
+  // object key (never rendered), and its free-text `name` field is never
+  // read at all, so nothing from this external source reaches innerHTML
+  // without going through Number() first.
+  (json?.results || []).forEach(r => {
+    map[r.ticker] = {
+      mentions: Number(r.mentions) || 0,
+      rank: Number(r.rank) || null,
+      mentions24hAgo: Number(r.mentions_24h_ago) || 0,
+    };
+  });
+
+  try { localStorage.setItem(key, JSON.stringify({ value: map, ts: Date.now() })); } catch { /* storage unavailable */ }
+  return map;
+}
+
 // Wilder's smoothed RSI, computed from daily closes (newest-first).
 function computeRSI(closesNewestFirst, period = 14) {
   if (closesNewestFirst.length < period + 1) return null;
@@ -337,11 +369,18 @@ function renderCard(stock, idx, isCrypto) {
     : { label: 'Mkt Cap', value: fmt(stock.mktCap) };
   const reasoning = buildReasoning(stock);
 
+  const wsb = wsbMentions[displayTicker];
+  const wsbBadge = wsb ? (() => {
+    const trend = wsb.mentions > wsb.mentions24hAgo ? '📈' : (wsb.mentions < wsb.mentions24hAgo ? '📉' : '➡️');
+    return `<div class="wsb-badge">🚀 ${wsb.mentions} WSB mentions today ${trend}</div>`;
+  })() : '';
+
   return `
     <div class="stock-card${cryptoClass}">
       <div class="stink-badge ${badgeClass}">${rsiLabel}</div>
       <div class="stock-ticker">${displayTicker}</div>
       <div class="stock-name">${stock.name}</div>
+      ${wsbBadge}
       <div class="stock-price-row">
         <div class="stock-price">${fmtPrice(stock.price, isCrypto)}</div>
         <div class="stock-change ${isUp ? 'up' : ''}">
@@ -405,6 +444,11 @@ function skeletonHTML(count) {
 // sort toggle can re-render from already-fetched data instead of refetching,
 // and so we know which tickers are still queued behind the rate limiter.
 const sectionState = {};
+
+// Populated once by the /wsb-mentions fetch (see bottom of file); renderCard
+// reads this directly, and we just re-render whatever sections already
+// exist when it lands, same pattern as market-cap hydration below.
+let wsbMentions = {};
 
 // Market cap is a whole extra request per stock, so it's only worth fetching
 // for tickers that actually made the cut into the visible top cards — fired
@@ -569,3 +613,10 @@ Promise.all([
   loadSection(STOCK_WATCHLIST, 'stocks-grid', false),
   loadSection(CRYPTO_WATCHLIST, 'crypto-grid', true)
 ]);
+
+// Fetched independently — whichever of this or the sections above finishes
+// first, the other just re-renders once it lands.
+getWsbMentions().then(map => {
+  wsbMentions = map;
+  ['stocks-grid', 'crypto-grid'].forEach(id => { if (sectionState[id]) renderSection(id); });
+});
