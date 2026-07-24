@@ -84,6 +84,33 @@ body {
   color: var(--text-muted);
 }
 
+/* ---- STINK INDEX ---- */
+.stink-index {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--surface2), var(--bg));
+}
+
+.stink-index-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.stink-index-value {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--stink);
+}
+
 /* ---- EXPLAINER ---- */
 .explainer {
   max-width: 680px;
@@ -360,6 +387,35 @@ body {
   line-height: 1.5;
   border-left: 2px solid var(--border);
   padding-left: 10px;
+}
+
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.share-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 4px 9px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.share-btn:hover {
+  color: var(--stink);
+  border-color: var(--stink);
+}
+
+.crypto-card .share-btn:hover {
+  color: var(--crypto-accent);
+  border-color: var(--crypto-accent);
 }
 
 /* ---- LOADING / SKELETON ---- */

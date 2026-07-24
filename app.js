@@ -261,6 +261,10 @@ function buildSparkline(closes, isCrypto) {
     + `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
 }
 
+function escapeAttr(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
 function renderCard(stock, idx, isCrypto) {
   const verdicts = isCrypto ? CRYPTO_VERDICTS : STOCK_VERDICTS;
   const isUp = stock.change >= 0;
@@ -315,6 +319,12 @@ function renderCard(stock, idx, isCrypto) {
         </div>
       </div>
       <div class="verdict">${verdict}</div>
+      <div class="card-footer">
+        <button class="share-btn" data-ticker="${displayTicker}" data-name="${escapeAttr(stock.name)}"
+          data-off-high="${stock.pctOffHigh.toFixed(1)}" data-rsi="${stock.rsi?.toFixed(1) ?? '—'}">
+          📤 Share this stink
+        </button>
+      </div>
     </div>
   `;
 }
@@ -411,6 +421,7 @@ async function loadSection(watchlist, gridId, isCrypto) {
     state.pending--;
     if (stock) state.results.push(stock);
     renderSection(gridId);
+    updateStinkIndex();
   }));
 }
 
@@ -423,6 +434,39 @@ document.querySelectorAll('.sort-toggle button').forEach(btn => {
     renderSection(gridId);
   });
 });
+
+// Cards are re-rendered via innerHTML on every sort/hydration pass, so share
+// buttons come and go — one delegated listener on the container outlives that.
+document.querySelector('.container').addEventListener('click', e => {
+  const btn = e.target.closest('.share-btn');
+  if (!btn) return;
+  const { ticker, name, offHigh, rsi } = btn.dataset;
+  const text = `${ticker} (${name}) is down ${Math.abs(offHigh)}% from its 52-week high and sitting at RSI ${rsi} on FartDollar.com 💨`;
+  const shareUrl = 'https://twitter.com/intent/tweet'
+    + `?text=${encodeURIComponent(text)}&url=${encodeURIComponent('https://fartdollar.com')}`;
+  window.open(shareUrl, '_blank', 'noopener');
+});
+
+// ---- MARKET STINK INDEX ----
+// Average % off 52-week high across every ticker that's resolved so far
+// (the whole watchlist, not just the top cards on display) — updates live
+// as each section's fetches land, then locks in once both are done.
+function updateStinkIndex() {
+  const sections = ['stocks-grid', 'crypto-grid'].map(id => sectionState[id]).filter(Boolean);
+  const allResults = sections.flatMap(s => s.results);
+  if (allResults.length === 0) return;
+
+  const avgOffHigh = allResults.reduce((sum, s) => sum + Math.abs(s.pctOffHigh), 0) / allResults.length;
+  const tiers = [
+    [10, 'Barely Sniffable'], [25, 'Mildly Funky'], [40, 'Pretty Rotten'],
+    [60, 'Nose-Burning'], [Infinity, 'Biohazard'],
+  ];
+  const [, tierLabel] = tiers.find(([max]) => avgOffHigh < max);
+
+  const stillLoading = sections.some(s => s.pending > 0);
+  document.getElementById('stink-index-value').textContent =
+    `${avgOffHigh.toFixed(0)}% off highs — ${tierLabel}${stillLoading ? '…' : ''}`;
+}
 
 // ---- INVEST TICKER ----
 let fartPrice = 0.000;
