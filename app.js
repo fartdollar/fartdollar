@@ -201,12 +201,20 @@ async function fetchTicker({ ticker, name, isCrypto }) {
   const rsi = computeRSI(closes, 14);
   const sparkCloses = closes.slice(0, 90).slice().reverse(); // oldest -> newest, for drawing
 
+  // bars[0] can be today's still-in-progress session (this endpoint returns
+  // it live during market hours), so its volume is naturally low next to a
+  // full-day average — that's a clock artifact, not a real signal. Compare
+  // the last *complete* session (bars[1]) against the average of the
+  // complete sessions before it instead.
+  const priorBars = bars.slice(1, 31);
+  const avgVolume = priorBars.reduce((sum, b) => sum + b.v, 0) / priorBars.length;
+
   // Market cap is fetched lazily (see hydrateMarketCaps) only for tickers
   // that actually end up displayed, since it's a whole extra request per
   // stock on a proxy that can't afford one per watchlist entry up front.
   const value = {
     ticker, name, price, change, changePct, rsi, mktCap: null, high52, pctOffHigh,
-    volume: bars[0].v, dayHigh: bars[0].h, dayLow: bars[0].l, sparkCloses,
+    volume: bars[0].v, prevVolume: bars[1].v, avgVolume, dayHigh: bars[0].h, dayLow: bars[0].l, sparkCloses,
   };
   try { localStorage.setItem(cacheKey, JSON.stringify({ value, ts: Date.now() })); } catch { /* storage unavailable */ }
   return value;
@@ -265,6 +273,56 @@ function escapeAttr(str) {
   return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+// Compares the trailing ~10-day close average against the ~10 days before
+// that (from the sparkline data already in memory) to describe direction,
+// rather than just leaving "oversold" sitting there with no trend context.
+function computeMomentum(sparkCloses) {
+  if (!sparkCloses || sparkCloses.length < 20) return null;
+  const avg = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const recent = avg(sparkCloses.slice(-10));
+  const prior = avg(sparkCloses.slice(-20, -10));
+  const pctMove = ((recent - prior) / prior) * 100;
+  if (pctMove > 3) return 'up';
+  if (pctMove < -3) return 'down';
+  return 'flat';
+}
+
+// Explains *why* a card is on the list using only numbers already fetched —
+// no new requests. Deliberately descriptive ("RSI suggests X") rather than
+// prescriptive ("buy this"), consistent with the site's own disclaimer.
+function buildReasoning(stock) {
+  const offHigh = Math.abs(stock.pctOffHigh).toFixed(0);
+  const magnitude = `Down ${offHigh}% from its 52-week high.`;
+
+  let rsiClause = '';
+  if (stock.rsi != null) {
+    const rsi = stock.rsi.toFixed(1);
+    if (stock.rsi < 20) {
+      rsiClause = `RSI has fallen to ${rsi}, deep oversold territory — a level that often precedes a bounce, though it can just as easily mean the selling isn't finished.`;
+    } else if (stock.rsi < 35) {
+      rsiClause = `RSI sits at ${rsi}, oversold by the classic 30–35 threshold technical traders watch.`;
+    } else if (stock.rsi <= 65) {
+      rsiClause = `RSI is a neutral ${rsi}, no strong momentum signal in either direction.`;
+    } else {
+      rsiClause = `RSI has climbed to ${rsi}, overbought — suggesting a recovery may already be underway.`;
+    }
+  }
+
+  const momentum = computeMomentum(stock.sparkCloses);
+  const momentumClause = {
+    up: "The last couple weeks show it climbing back.",
+    down: "The chart's still sliding heading into today.",
+    flat: "It's been mostly flat the past couple weeks.",
+  }[momentum] || '';
+
+  const volRatio = stock.avgVolume ? stock.prevVolume / stock.avgVolume : null;
+  const volumeClause = volRatio > 1.5
+    ? "Its last full session traded well above average volume, so more attention than usual is on it."
+    : (volRatio && volRatio < 0.6 ? "Its last full session traded on lighter-than-usual volume — not much conviction either way." : '');
+
+  return [magnitude, rsiClause, momentumClause, volumeClause].filter(Boolean).join(' ');
+}
+
 function renderCard(stock, idx, isCrypto) {
   const verdicts = isCrypto ? CRYPTO_VERDICTS : STOCK_VERDICTS;
   const isUp = stock.change >= 0;
@@ -277,6 +335,7 @@ function renderCard(stock, idx, isCrypto) {
   const firstMeta = isCrypto
     ? { label: 'Day Range', value: `${fmtPrice(stock.dayLow, true)}–${fmtPrice(stock.dayHigh, true)}` }
     : { label: 'Mkt Cap', value: fmt(stock.mktCap) };
+  const reasoning = buildReasoning(stock);
 
   return `
     <div class="stock-card${cryptoClass}">
@@ -318,6 +377,7 @@ function renderCard(stock, idx, isCrypto) {
           </div>
         </div>
       </div>
+      <div class="reasoning">${reasoning}</div>
       <div class="verdict">${verdict}</div>
       <div class="card-footer">
         <button class="share-btn" data-ticker="${displayTicker}" data-name="${escapeAttr(stock.name)}"

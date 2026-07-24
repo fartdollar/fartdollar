@@ -379,8 +379,15 @@ body {
   background: linear-gradient(to right, var(--green), var(--gold), var(--red));
 }
 
-.verdict {
+.reasoning {
   margin-top: 12px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.verdict {
+  margin-top: 10px;
   font-size: 11px;
   font-style: italic;
   color: var(--text-muted);
