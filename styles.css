@@ -318,25 +318,6 @@ body {
   color: #000;
 }
 
-/* ---- DOOM PAGE ---- */
-.doom-frame-wrap {
-  width: 100%;
-  max-width: 960px;
-  aspect-ratio: 4 / 3;
-  margin: 0 auto 20px;
-  background: #000;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.doom-frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-}
-
 .stock-price-row {
   display: flex;
   align-items: baseline;
