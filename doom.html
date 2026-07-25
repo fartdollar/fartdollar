@@ -197,6 +197,12 @@
         canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); }, false);
         return canvas;
       })(),
+      // Emscripten's own fullscreen-canvas-sizing code checks this and
+      // letterboxes to match instead of stretching to the physical screen.
+      // requestFullscreen(_, false) (skipping that codepath entirely)
+      // turned out to hit an uninitialized-value bug elsewhere in this
+      // build's glue code, so this is the actual fix, not that.
+      forcedAspectRatio: 4 / 3,
       locateFile: function (path) { return DOOM_PROXY + path; },
       totalDependencies: 0,
       setStatus: function (text) {
@@ -233,12 +239,13 @@
     };
 
     document.getElementById('doom-fullscreen').addEventListener('click', function () {
-      // false, false = no pointer lock (touch/D-pad, not mouse-look), and
-      // don't let Emscripten stretch the canvas to the physical screen's
-      // aspect ratio — that broke Doom's native 4:3 into a distorted wide
-      // view on a landscape phone. Keeping the canvas at its own aspect
-      // lets the browser letterbox it within fullscreen instead.
-      if (Module.requestFullscreen) Module.requestFullscreen(false, false);
+      // false = no pointer lock (touch/D-pad controls, not mouse-look).
+      // true = let Emscripten resize the canvas to fill the fullscreen
+      // element — correct now that Module.forcedAspectRatio (above) tells
+      // it to letterbox instead of stretch. resizeCanvas:false looked like
+      // the fix but actually hit a different bug (see above), so this
+      // reverts back to true rather than building on that path.
+      if (Module.requestFullscreen) Module.requestFullscreen(false, true);
     });
 
     // Synthesizes the keyboard/mouse events PrBoom's SDL2 input layer
