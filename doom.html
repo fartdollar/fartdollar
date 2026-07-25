@@ -201,7 +201,24 @@
     document.getElementById('canvas').addEventListener('pointerdown', function () {
       this.focus();
     });
+
+    // Without this, a broken engine script or a runtime exception fails
+    // silently — the status div just sits on "Loading DOOM..." forever
+    // with nothing in view to tell us why.
+    window.onerror = function (message) {
+      Module.setStatus('Error: ' + message);
+      return false;
+    };
+    window.addEventListener('unhandledrejection', function (e) {
+      Module.setStatus('Error: ' + (e.reason && e.reason.message || e.reason));
+    });
+
+    var engineScript = document.createElement('script');
+    engineScript.src = '/doom-assets/doom1.js';
+    engineScript.onerror = function () {
+      Module.setStatus('Error: failed to load the game engine script (/doom-assets/doom1.js)');
+    };
+    document.body.appendChild(engineScript);
   </script>
-  <script src="/doom-assets/doom1.js"></script>
 </body>
 </html>
