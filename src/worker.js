@@ -9,6 +9,20 @@ const ALLOWED_ORIGIN = 'https://fartdollar.com';
 const POLYGON_BASE = 'https://api.polygon.io';
 const APEWISDOM_URL = 'https://apewisdom.io/api/v1.0/filter/all-stocks/page/1';
 
+// Prebuilt WebAssembly PrBoom+ (GPL) with the 1993 DOOM shareware IWAD baked
+// in, from https://github.com/raz0red/webprboom's github-pages branch. The
+// .data file alone is ~39MB, over Cloudflare's 25MB static-asset-per-file
+// cap, so all three engine files are proxied here at request time rather
+// than deployed as assets — same-origin for the page that loads them, which
+// avoids the frame/cross-origin-isolation restrictions that blocked
+// embedding third-party Doom demos directly.
+const DOOM_BASE = 'https://raw.githubusercontent.com/raz0red/webprboom/github-pages/doom1';
+const DOOM_ASSETS = {
+  'doom1.js': 'application/javascript',
+  'doom1.wasm': 'application/wasm',
+  'doom1.data': 'application/octet-stream',
+};
+
 // Ticker/symbol as used by app.js: plain tickers (AAPL) or crypto pairs
 // (X:BTCUSD). Dates are always ISO (YYYY-MM-DD) from toISODate().
 const TICKER_RE = /^[A-Z0-9:.\-]{1,20}$/;
@@ -62,6 +76,17 @@ async function handleAggs(url, env) {
   return proxyToPolygon(`/v2/aggs/ticker/${symbol}/range/1/day/${from}/${to}`, url.search, env);
 }
 
+async function handleDoomAsset(filename) {
+  const contentType = DOOM_ASSETS[filename];
+  const res = await fetch(`${DOOM_BASE}/${filename}`, {
+    cf: { cacheTtl: 31536000, cacheEverything: true },
+  });
+  if (!res.ok) return new Response('Not found', { status: 502 });
+  return new Response(res.body, {
+    headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' },
+  });
+}
+
 async function handleWsbMentions() {
   const res = await fetch(APEWISDOM_URL);
   if (!res.ok) return jsonResponse({ results: [] }, 502);
@@ -84,6 +109,11 @@ export default {
       if (url.pathname === '/wsb-mentions') return handleWsbMentions();
       if (TICKER_DETAIL_PATH_RE.test(url.pathname)) return handleTickerDetail(url, env);
       if (AGGS_PATH_RE.test(url.pathname)) return handleAggs(url, env);
+      if (url.pathname.startsWith('/doom-assets/')) {
+        const filename = url.pathname.slice('/doom-assets/'.length);
+        if (Object.prototype.hasOwnProperty.call(DOOM_ASSETS, filename)) return handleDoomAsset(filename);
+        return new Response('Not found', { status: 404 });
+      }
     }
 
     return env.ASSETS.fetch(request);
