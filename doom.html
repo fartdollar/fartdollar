@@ -101,6 +101,14 @@
       background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.6);
     }
     .btn-fire:active { background: rgba(239, 68, 68, 0.45); border-color: var(--red); }
+
+    /* Menus confirm a selection with Enter specifically — Fire/Use don't
+       do it — so without this button, arrows navigate but nothing selects. */
+    .btn-ok {
+      left: 50%; bottom: 16px; transform: translateX(-50%); width: 56px; height: 56px; font-size: 10px;
+      background: rgba(163, 230, 21, 0.12); border-color: rgba(163, 230, 21, 0.5);
+    }
+    .btn-ok:active { background: rgba(163, 230, 21, 0.4); border-color: var(--stink); }
   </style>
 </head>
 <body>
@@ -132,6 +140,7 @@
         <button class="dpad-right" data-code="ArrowRight" data-key="ArrowRight" data-keycode="39">▶</button>
         <button class="btn-use"  data-code="Space"        data-key=" "         data-keycode="32">USE</button>
         <button class="btn-fire" data-code="ControlLeft"  data-key="Control"   data-keycode="17">FIRE</button>
+        <button class="btn-ok"   data-code="Enter"        data-key="Enter"     data-keycode="13">OK</button>
       </div>
     </div>
 
