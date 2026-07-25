@@ -101,6 +101,14 @@
       background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.6);
     }
     .btn-fire:active { background: rgba(239, 68, 68, 0.45); border-color: var(--red); }
+
+    /* Menus confirm a selection with Enter specifically — Fire/Use don't
+       do it — so without this button, arrows navigate but nothing selects. */
+    .btn-ok {
+      left: 50%; bottom: 16px; transform: translateX(-50%); width: 56px; height: 56px; font-size: 10px;
+      background: rgba(163, 230, 21, 0.12); border-color: rgba(163, 230, 21, 0.5);
+    }
+    .btn-ok:active { background: rgba(163, 230, 21, 0.4); border-color: var(--stink); }
   </style>
 </head>
 <body>
@@ -132,6 +140,7 @@
         <button class="dpad-right" data-code="ArrowRight" data-key="ArrowRight" data-keycode="39">▶</button>
         <button class="btn-use"  data-code="Space"        data-key=" "         data-keycode="32">USE</button>
         <button class="btn-fire" data-code="ControlLeft"  data-key="Control"   data-keycode="17">FIRE</button>
+        <button class="btn-ok"   data-code="Enter"        data-key="Enter"     data-keycode="13">OK</button>
       </div>
     </div>
 
@@ -212,20 +221,45 @@
     // Without this, a broken engine script or a runtime exception fails
     // silently — the status div just sits on "Loading DOOM..." forever
     // with nothing in view to tell us why.
-    window.onerror = function (message) {
-      Module.setStatus('Error: ' + message);
+    window.onerror = function (message, source, lineno, colno) {
+      Module.setStatus('Error: ' + message + (source ? ' (' + source + ':' + lineno + ':' + colno + ')' : ''));
       return false;
     };
     window.addEventListener('unhandledrejection', function (e) {
       Module.setStatus('Error: ' + (e.reason && e.reason.message || e.reason));
     });
 
-    var engineScript = document.createElement('script');
-    engineScript.src = DOOM_PROXY + 'doom1.js';
-    engineScript.onerror = function () {
-      Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
-    };
-    document.body.appendChild(engineScript);
+    // Emscripten's own wasm-fetch logic (streaming, then a sync-XHR
+    // fallback) was failing with a generic "both async and sync fetching
+    // of the wasm failed" abort and no further detail. Fetching the bytes
+    // ourselves and handing them to Module.wasmBinary makes Emscripten skip
+    // its internal fetch entirely — and if this fetch fails instead, our
+    // own .catch() shows the real HTTP status/network error instead of
+    // Emscripten's generic abort message.
+    Module.setStatus('Fetching engine…');
+    fetch(DOOM_PROXY + 'doom1.wasm')
+      .then(function (res) {
+        if (!res.ok) throw new Error('doom1.wasm fetch failed: HTTP ' + res.status);
+        return res.arrayBuffer();
+      })
+      .then(function (bytes) {
+        Module.wasmBinary = bytes;
+
+        var engineScript = document.createElement('script');
+        // Without this, a cross-origin script's runtime errors get reported
+        // to window.onerror as an opaque "Script error." with no
+        // message/line/file — even though the Worker already sends the
+        // CORS header this needs to unlock the real detail.
+        engineScript.crossOrigin = 'anonymous';
+        engineScript.src = DOOM_PROXY + 'doom1.js';
+        engineScript.onerror = function () {
+          Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
+        };
+        document.body.appendChild(engineScript);
+      })
+      .catch(function (err) {
+        Module.setStatus('Error: ' + err.message);
+      });
   </script>
 </body>
 </html>
