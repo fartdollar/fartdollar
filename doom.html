@@ -109,6 +109,13 @@
       background: rgba(163, 230, 21, 0.12); border-color: rgba(163, 230, 21, 0.5);
     }
     .btn-ok:active { background: rgba(163, 230, 21, 0.4); border-color: var(--stink); }
+
+    .doom-look-zone {
+      position: absolute;
+      inset: 0;
+      pointer-events: auto;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
@@ -134,14 +141,23 @@
       <div class="doom-status" id="doom-status">Loading DOOM…</div>
 
       <div class="doom-touch">
-        <!-- This build remaps movement to WASD-style keys (w/s move, q/e
-             turn) instead of vanilla Doom's arrow keys — arrows are reserved
-             for menu navigation only in its default config, which is why
-             they worked there but did nothing in actual gameplay. -->
+        <!-- Drag anywhere on the stage to turn — a swipe-hold "virtual
+             touchpad" rather than a one-shot flick, since turning needs to
+             stay held for as long as you keep dragging past the deadzone.
+             Comes first so it paints *behind* the buttons below, catching
+             only touches that land outside them. -->
+        <div class="doom-look-zone" id="doom-look-zone"></div>
+
+        <!-- This build remaps movement to WASD-style keys (w/s move,
+             a/d strafe) instead of vanilla Doom's arrow keys — arrows are
+             reserved for menu navigation only in its default config, which
+             is why they worked there but did nothing in actual gameplay. -->
         <button class="dpad-up"    data-code="KeyW" data-key="w" data-keycode="87">▲</button>
         <button class="dpad-down"  data-code="KeyS" data-key="s" data-keycode="83">▼</button>
-        <button class="dpad-left"  data-code="KeyQ" data-key="q" data-keycode="81">◀</button>
-        <button class="dpad-right" data-code="KeyE" data-key="e" data-keycode="69">▶</button>
+        <!-- Left/right sidestep instead of turn — turning lives on the
+             swipe zone above instead, so both fit without crowding. -->
+        <button class="dpad-left"  data-code="KeyA" data-key="a" data-keycode="65">◀</button>
+        <button class="dpad-right" data-code="KeyD" data-key="d" data-keycode="68">▶</button>
         <button class="btn-use"  data-code="Space" data-key=" " data-keycode="32">USE</button>
         <!-- Fire is bound to the left mouse button in this build's config
              (key_fire is explicitly removed), not a keyboard key. -->
@@ -156,6 +172,7 @@
         shareware back in 1993 — legally free to play and share. Running on
         <a href="https://github.com/raz0red/webprboom" target="_blank" rel="noopener noreferrer">PrBoom+</a>
         (GPL), compiled to WebAssembly, self-hosted here so touch controls actually work.
+        Drag left/right anywhere on the screen (outside the buttons) to turn.
       </p>
     </div>
   </div>
@@ -226,6 +243,12 @@
     // physical input. Fire is a mouse button in this build's config, not a
     // key, so it needs a MouseEvent aimed at the canvas instead.
     var canvasEl = document.getElementById('canvas');
+    function dispatchKey(type, code, key, keyCode) {
+      document.dispatchEvent(new KeyboardEvent(type, {
+        code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
+      }));
+    }
+
     document.querySelectorAll('.doom-touch button').forEach(function (btn) {
       var isMouse = btn.dataset.input === 'mouse';
       var code = btn.dataset.code, key = btn.dataset.key, keyCode = Number(btn.dataset.keycode);
@@ -234,9 +257,7 @@
           var mouseType = type === 'keydown' ? 'mousedown' : 'mouseup';
           canvasEl.dispatchEvent(new MouseEvent(mouseType, { button: 0, bubbles: true, cancelable: true }));
         } else {
-          document.dispatchEvent(new KeyboardEvent(type, {
-            code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
-          }));
+          dispatchKey(type, code, key, keyCode);
         }
       };
       btn.addEventListener('pointerdown', function (e) {
@@ -257,6 +278,39 @@
     document.getElementById('canvas').addEventListener('pointerdown', function () {
       this.focus();
     });
+
+    // Swipe-to-turn: drag past a small deadzone in either direction and the
+    // corresponding turn key (q/e) stays held for as long as the drag stays
+    // past that point, like a virtual touchpad — released back to neutral
+    // once you return toward center or lift your finger.
+    (function () {
+      var zone = document.getElementById('doom-look-zone');
+      var DEADZONE = 12;
+      var startX = 0, turningDir = 0; // -1 = left/q, 1 = right/e, 0 = neither
+
+      function setTurn(dir) {
+        if (dir === turningDir) return;
+        if (turningDir === -1) dispatchKey('keyup', 'KeyQ', 'q', 81);
+        if (turningDir === 1)  dispatchKey('keyup', 'KeyE', 'e', 69);
+        if (dir === -1) dispatchKey('keydown', 'KeyQ', 'q', 81);
+        if (dir === 1)  dispatchKey('keydown', 'KeyE', 'e', 69);
+        turningDir = dir;
+      }
+
+      zone.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        zone.setPointerCapture(e.pointerId);
+        startX = e.clientX;
+      });
+      zone.addEventListener('pointermove', function (e) {
+        var delta = e.clientX - startX;
+        setTurn(delta > DEADZONE ? 1 : delta < -DEADZONE ? -1 : 0);
+      });
+      var endDrag = function () { setTurn(0); };
+      zone.addEventListener('pointerup', endDrag);
+      zone.addEventListener('pointercancel', endDrag);
+      zone.addEventListener('lostpointercapture', endDrag);
+    })();
 
     // Without this, a broken engine script or a runtime exception fails
     // silently — the status div just sits on "Loading DOOM..." forever
