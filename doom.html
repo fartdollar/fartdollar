@@ -212,8 +212,8 @@
     // Without this, a broken engine script or a runtime exception fails
     // silently — the status div just sits on "Loading DOOM..." forever
     // with nothing in view to tell us why.
-    window.onerror = function (message) {
-      Module.setStatus('Error: ' + message);
+    window.onerror = function (message, source, lineno, colno) {
+      Module.setStatus('Error: ' + message + (source ? ' (' + source + ':' + lineno + ':' + colno + ')' : ''));
       return false;
     };
     window.addEventListener('unhandledrejection', function (e) {
@@ -221,6 +221,11 @@
     });
 
     var engineScript = document.createElement('script');
+    // Without this, a cross-origin script's runtime errors get reported to
+    // window.onerror as an opaque "Script error." with no message/line/file
+    // — exactly what we were seeing — even though the Worker already sends
+    // the CORS header this needs to unlock the real detail.
+    engineScript.crossOrigin = 'anonymous';
     engineScript.src = DOOM_PROXY + 'doom1.js';
     engineScript.onerror = function () {
       Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
