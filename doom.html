@@ -134,13 +134,19 @@
       <div class="doom-status" id="doom-status">Loading DOOM…</div>
 
       <div class="doom-touch">
-        <button class="dpad-up"    data-code="ArrowUp"    data-key="ArrowUp"    data-keycode="38">▲</button>
-        <button class="dpad-down"  data-code="ArrowDown"  data-key="ArrowDown"  data-keycode="40">▼</button>
-        <button class="dpad-left"  data-code="ArrowLeft"  data-key="ArrowLeft"  data-keycode="37">◀</button>
-        <button class="dpad-right" data-code="ArrowRight" data-key="ArrowRight" data-keycode="39">▶</button>
-        <button class="btn-use"  data-code="Space"        data-key=" "         data-keycode="32">USE</button>
-        <button class="btn-fire" data-code="ControlLeft"  data-key="Control"   data-keycode="17">FIRE</button>
-        <button class="btn-ok"   data-code="Enter"        data-key="Enter"     data-keycode="13">OK</button>
+        <!-- This build remaps movement to WASD-style keys (w/s move, q/e
+             turn) instead of vanilla Doom's arrow keys — arrows are reserved
+             for menu navigation only in its default config, which is why
+             they worked there but did nothing in actual gameplay. -->
+        <button class="dpad-up"    data-code="KeyW" data-key="w" data-keycode="87">▲</button>
+        <button class="dpad-down"  data-code="KeyS" data-key="s" data-keycode="83">▼</button>
+        <button class="dpad-left"  data-code="KeyQ" data-key="q" data-keycode="81">◀</button>
+        <button class="dpad-right" data-code="KeyE" data-key="e" data-keycode="69">▶</button>
+        <button class="btn-use"  data-code="Space" data-key=" " data-keycode="32">USE</button>
+        <!-- Fire is bound to the left mouse button in this build's config
+             (key_fire is explicitly removed), not a keyboard key. -->
+        <button class="btn-fire" data-input="mouse">FIRE</button>
+        <button class="btn-ok"   data-code="Enter" data-key="Enter" data-keycode="13">OK</button>
       </div>
     </div>
 
@@ -191,6 +197,22 @@
       },
       print: function () {},
       printErr: function () {},
+      // Doom opens its main menu on any keypress at any point during the
+      // idle title/demo loop — but a real first tap can land in the brief
+      // window between "demo visibly starts" and "the engine's keyboard
+      // listeners are actually attached," getting silently dropped with
+      // nothing else to trigger the menu afterward. Nudging a harmless key
+      // ourselves once the engine reports postRun (safely after that
+      // window) opens the menu reliably without depending on tap timing.
+      postRun: [function () {
+        setTimeout(function () {
+          ['keydown', 'keyup'].forEach(function (type) {
+            document.dispatchEvent(new KeyboardEvent(type, {
+              code: 'Enter', key: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true,
+            }));
+          });
+        }, 1000);
+      }],
     };
 
     document.getElementById('doom-fullscreen').addEventListener('click', function () {
@@ -199,14 +221,23 @@
       if (Module.requestFullscreen) Module.requestFullscreen(false, true);
     });
 
-    // Synthesizes the keyboard events PrBoom's SDL2 input layer listens for,
-    // so on-screen buttons behave exactly like the equivalent physical key.
+    // Synthesizes the keyboard/mouse events PrBoom's SDL2 input layer
+    // listens for, so on-screen buttons behave exactly like the equivalent
+    // physical input. Fire is a mouse button in this build's config, not a
+    // key, so it needs a MouseEvent aimed at the canvas instead.
+    var canvasEl = document.getElementById('canvas');
     document.querySelectorAll('.doom-touch button').forEach(function (btn) {
+      var isMouse = btn.dataset.input === 'mouse';
       var code = btn.dataset.code, key = btn.dataset.key, keyCode = Number(btn.dataset.keycode);
       var fire = function (type) {
-        document.dispatchEvent(new KeyboardEvent(type, {
-          code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
-        }));
+        if (isMouse) {
+          var mouseType = type === 'keydown' ? 'mousedown' : 'mouseup';
+          canvasEl.dispatchEvent(new MouseEvent(mouseType, { button: 0, bubbles: true, cancelable: true }));
+        } else {
+          document.dispatchEvent(new KeyboardEvent(type, {
+            code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
+          }));
+        }
       };
       btn.addEventListener('pointerdown', function (e) {
         e.preventDefault();
