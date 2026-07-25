@@ -191,6 +191,22 @@
       },
       print: function () {},
       printErr: function () {},
+      // Doom opens its main menu on any keypress at any point during the
+      // idle title/demo loop — but a real first tap can land in the brief
+      // window between "demo visibly starts" and "the engine's keyboard
+      // listeners are actually attached," getting silently dropped with
+      // nothing else to trigger the menu afterward. Nudging a harmless key
+      // ourselves once the engine reports postRun (safely after that
+      // window) opens the menu reliably without depending on tap timing.
+      postRun: [function () {
+        setTimeout(function () {
+          ['keydown', 'keyup'].forEach(function (type) {
+            document.dispatchEvent(new KeyboardEvent(type, {
+              code: 'Enter', key: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true,
+            }));
+          });
+        }, 1000);
+      }],
     };
 
     document.getElementById('doom-fullscreen').addEventListener('click', function () {
