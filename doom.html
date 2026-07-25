@@ -2,12 +2,106 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Play DOOM — FartDollar.com</title>
   <meta name="description" content="Play the original 1993 DOOM shareware episode right in your browser. A free FartDollar.com easter egg." />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💩</text></svg>" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    .doom-page { max-width: 900px; margin: 0 auto; padding: 0 24px 40px; }
+
+    .doom-stage {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #000;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .doom-stage canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .doom-status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: #000;
+      pointer-events: none;
+    }
+
+    .doom-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+
+    .doom-toolbar button {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .doom-toolbar button:hover { color: var(--stink); border-color: var(--stink); }
+
+    /* Touch controls: overlaid on the stage, thumb-reachable corners.
+       Harmless on desktop (mouse can click them too), just unnecessary. */
+    .doom-touch {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .doom-touch button {
+      position: absolute;
+      pointer-events: auto;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      border-radius: 50%;
+      width: 52px;
+      height: 52px;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .doom-touch button:active { background: rgba(163, 230, 21, 0.35); border-color: var(--stink); }
+
+    .dpad-up    { left: 60px;  bottom: 118px; }
+    .dpad-down  { left: 60px;  bottom: 16px;  }
+    .dpad-left  { left: 8px;   bottom: 67px;  }
+    .dpad-right { left: 112px; bottom: 67px;  }
+
+    .btn-use  { right: 90px; bottom: 16px; width: 60px; height: 60px; font-size: 11px; }
+    .btn-fire {
+      right: 12px; bottom: 16px; width: 72px; height: 72px; font-size: 13px;
+      background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.6);
+    }
+    .btn-fire:active { background: rgba(239, 68, 68, 0.45); border-color: var(--red); }
+  </style>
 </head>
 <body>
 
@@ -17,42 +111,97 @@
     <div class="tagline-bottom">Now with 100% more demonic invasion</div>
   </div>
 
-  <div class="container">
+  <div class="container doom-page">
     <div class="section-header">
       <span>🔫</span> Play DOOM (1993 Shareware)
       <a class="pill" href="index.html">&larr; Back to the stink</a>
     </div>
 
-    <div class="invest-widget">
-      <div class="ticker-row">
-        <div class="ticker-symbol">🔫 DOOM</div>
+    <div class="doom-toolbar">
+      <button id="doom-fullscreen">⛶ Fullscreen</button>
+    </div>
+
+    <div class="doom-stage" id="doom-stage">
+      <canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+      <div class="doom-status" id="doom-status">Loading DOOM…</div>
+
+      <div class="doom-touch">
+        <button class="dpad-up"    data-code="ArrowUp"    data-key="ArrowUp"    data-keycode="38">▲</button>
+        <button class="dpad-down"  data-code="ArrowDown"  data-key="ArrowDown"  data-keycode="40">▼</button>
+        <button class="dpad-left"  data-code="ArrowLeft"  data-key="ArrowLeft"  data-keycode="37">◀</button>
+        <button class="dpad-right" data-code="ArrowRight" data-key="ArrowRight" data-keycode="39">▶</button>
+        <button class="btn-use"  data-code="Space"        data-key=" "         data-keycode="32">USE</button>
+        <button class="btn-fire" data-code="ControlLeft"  data-key="Control"   data-keycode="17">FIRE</button>
       </div>
-      <a class="invest-btn" href="https://dos.zone/doom-dec-1993/" target="_blank" rel="noopener noreferrer">
-        Play on Desktop
-      </a>
-      <a class="invest-btn" href="https://www.lemon-web.net/lemon-blog/games/doom-play-the-classic-dos-shooter-online-in-your-browser" target="_blank" rel="noopener noreferrer">
-        Play on Mobile
-      </a>
-      <div class="invest-sub">Both open in a new tab. Desktop uses keyboard controls; mobile uses on-screen touch controls built for it.</div>
     </div>
 
     <div class="explainer">
       <p>
         This is the free first episode ("Knee-Deep in the Dead") that id Software released as
-        shareware back in 1993 — legally free to play and share, via
-        <a href="https://dos.zone/" target="_blank" rel="noopener noreferrer">dos.zone</a>
-        (desktop) or
-        <a href="https://www.lemon-web.net/" target="_blank" rel="noopener noreferrer">Lemon Web</a>
-        (mobile).
+        shareware back in 1993 — legally free to play and share. Running on
+        <a href="https://github.com/raz0red/webprboom" target="_blank" rel="noopener noreferrer">PrBoom+</a>
+        (GPL), compiled to WebAssembly, self-hosted here so touch controls actually work.
       </p>
     </div>
   </div>
 
   <footer>
-    DOOM is a trademark of id Software LLC. This page links to the officially free shareware
-    episode running on a third-party browser emulator — no relation to FartDollar.com's financial
-    "advice," which remains equally imaginary.
+    DOOM is a trademark of id Software LLC. This page runs the free shareware episode via the
+    open-source PrBoom+ engine — no relation to FartDollar.com's financial "advice," which
+    remains equally imaginary.
   </footer>
 
+  <script>
+    var Module = {
+      canvas: (function () {
+        var canvas = document.getElementById('canvas');
+        canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); }, false);
+        return canvas;
+      })(),
+      locateFile: function (path) { return '/doom-assets/' + path; },
+      totalDependencies: 0,
+      setStatus: function (text) {
+        var el = document.getElementById('doom-status');
+        if (!el) return;
+        if (!text) { el.style.display = 'none'; return; }
+        el.style.display = 'flex';
+        el.textContent = text;
+      },
+      monitorRunDependencies: function (left) {
+        this.totalDependencies = Math.max(this.totalDependencies, left);
+        Module.setStatus(left
+          ? 'Loading… (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')'
+          : '');
+      },
+      print: function () {},
+      printErr: function () {},
+    };
+
+    document.getElementById('doom-fullscreen').addEventListener('click', function () {
+      // false = no pointer lock (touch/D-pad controls, not mouse-look).
+      // true = let Emscripten resize the canvas to fill the fullscreen element.
+      if (Module.requestFullscreen) Module.requestFullscreen(false, true);
+    });
+
+    // Synthesizes the keyboard events PrBoom's SDL2 input layer listens for,
+    // so on-screen buttons behave exactly like the equivalent physical key.
+    document.querySelectorAll('.doom-touch button').forEach(function (btn) {
+      var code = btn.dataset.code, key = btn.dataset.key, keyCode = Number(btn.dataset.keycode);
+      var fire = function (type) {
+        document.dispatchEvent(new KeyboardEvent(type, {
+          code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
+        }));
+      };
+      btn.addEventListener('pointerdown', function (e) { e.preventDefault(); fire('keydown'); });
+      btn.addEventListener('pointerup', function (e) { e.preventDefault(); fire('keyup'); });
+      btn.addEventListener('pointercancel', function () { fire('keyup'); });
+      btn.addEventListener('pointerleave', function () { fire('keyup'); });
+    });
+
+    document.getElementById('canvas').addEventListener('pointerdown', function () {
+      this.focus();
+    });
+  </script>
+  <script src="/doom-assets/doom1.js"></script>
 </body>
 </html>
