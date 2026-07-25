@@ -233,9 +233,12 @@
     };
 
     document.getElementById('doom-fullscreen').addEventListener('click', function () {
-      // false = no pointer lock (touch/D-pad controls, not mouse-look).
-      // true = let Emscripten resize the canvas to fill the fullscreen element.
-      if (Module.requestFullscreen) Module.requestFullscreen(false, true);
+      // false, false = no pointer lock (touch/D-pad, not mouse-look), and
+      // don't let Emscripten stretch the canvas to the physical screen's
+      // aspect ratio — that broke Doom's native 4:3 into a distorted wide
+      // view on a landscape phone. Keeping the canvas at its own aspect
+      // lets the browser letterbox it within fullscreen instead.
+      if (Module.requestFullscreen) Module.requestFullscreen(false, false);
     });
 
     // Synthesizes the keyboard/mouse events PrBoom's SDL2 input layer
