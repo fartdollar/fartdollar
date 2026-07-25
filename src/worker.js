@@ -82,8 +82,12 @@ async function handleDoomAsset(filename) {
     cf: { cacheTtl: 31536000, cacheEverything: true },
   });
   if (!res.ok) return new Response('Not found', { status: 502 });
+  // Short browser cache, not "immutable" — a bad or truncated response
+  // here shouldn't be able to strand a visitor's browser on a broken copy
+  // for a year with no way to self-heal on a normal reload. Cloudflare's
+  // own edge cache (the cf option above) still absorbs repeat traffic.
   return new Response(res.body, {
-    headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable' },
+    headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' },
   });
 }
 
