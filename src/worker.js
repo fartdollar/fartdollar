@@ -87,7 +87,7 @@ async function handleDoomAsset(filename) {
   // for a year with no way to self-heal on a normal reload. Cloudflare's
   // own edge cache (the cf option above) still absorbs repeat traffic.
   return new Response(res.body, {
-    headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600' },
+    headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=3600', ...corsHeaders() },
   });
 }
 

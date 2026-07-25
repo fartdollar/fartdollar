@@ -152,13 +152,20 @@
   </footer>
 
   <script>
+    // fartdollar.com's own DNS/hosting doesn't reliably route through the
+    // Cloudflare Worker for arbitrary paths (relative /doom-assets/ 404'd
+    // here even though it works on the workers.dev domain directly) — same
+    // reason app.js's PROXY constant hits this absolute URL instead of a
+    // relative path.
+    var DOOM_PROXY = 'https://fartdollar.zhodgkin14.workers.dev/doom-assets/';
+
     var Module = {
       canvas: (function () {
         var canvas = document.getElementById('canvas');
         canvas.addEventListener('webglcontextlost', function (e) { e.preventDefault(); }, false);
         return canvas;
       })(),
-      locateFile: function (path) { return '/doom-assets/' + path; },
+      locateFile: function (path) { return DOOM_PROXY + path; },
       totalDependencies: 0,
       setStatus: function (text) {
         var el = document.getElementById('doom-status');
@@ -214,9 +221,9 @@
     });
 
     var engineScript = document.createElement('script');
-    engineScript.src = '/doom-assets/doom1.js';
+    engineScript.src = DOOM_PROXY + 'doom1.js';
     engineScript.onerror = function () {
-      Module.setStatus('Error: failed to load the game engine script (/doom-assets/doom1.js)');
+      Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
     };
     document.body.appendChild(engineScript);
   </script>
