@@ -310,6 +310,19 @@
       zone.addEventListener('pointerup', endDrag);
       zone.addEventListener('pointercancel', endDrag);
       zone.addEventListener('lostpointercapture', endDrag);
+
+      // PrBoom's SDL2 layer reads raw touch events directly (its own
+      // touch-to-mouse translation, separate from the browser's), so
+      // preventDefault() on the pointer event alone doesn't stop a drag
+      // here from also registering as a canvas click there. Blocking the
+      // touch events at their source, before they can reach whatever's
+      // listening elsewhere, is what actually keeps this zone turn-only.
+      ['touchstart', 'touchmove', 'touchend', 'touchcancel'].forEach(function (type) {
+        zone.addEventListener(type, function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }, { passive: false });
+      });
     })();
 
     // Without this, a broken engine script or a runtime exception fails
