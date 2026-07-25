@@ -170,6 +170,7 @@ async function getWsbMentions() {
       mentions: Number(r.mentions) || 0,
       rank: Number(r.rank) || null,
       mentions24hAgo: Number(r.mentions_24h_ago) || 0,
+      upvotes: Number(r.upvotes) || 0,
     };
   });
 
@@ -372,7 +373,10 @@ function renderCard(stock, idx, isCrypto) {
   const wsb = wsbMentions[displayTicker];
   const wsbBadge = wsb ? (() => {
     const trend = wsb.mentions > wsb.mentions24hAgo ? '📈' : (wsb.mentions < wsb.mentions24hAgo ? '📉' : '➡️');
-    return `<div class="wsb-badge">🚀 ${wsb.mentions} WSB mentions today ${trend}</div>`;
+    const rankText = wsb.rank ? `Rank #${wsb.rank} · ` : '';
+    const redditUrl = `https://www.reddit.com/r/wallstreetbets/search/?q=${encodeURIComponent(displayTicker)}&restrict_sr=1&sort=new`;
+    return `<a class="wsb-badge" href="${redditUrl}" target="_blank" rel="noopener noreferrer">`
+      + `🚀 ${rankText}${wsb.mentions} mentions ${trend} · ${wsb.upvotes} upvotes</a>`;
   })() : '';
 
   return `

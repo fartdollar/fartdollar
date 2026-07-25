@@ -308,6 +308,13 @@ body {
   border-radius: 3px;
   padding: 2px 7px;
   margin-bottom: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wsb-badge:hover {
+  background: var(--gold);
+  color: #000;
 }
 
 .stock-price-row {
