@@ -374,7 +374,7 @@ function renderCard(stock, idx, isCrypto) {
   const wsbBadge = wsb ? (() => {
     const trend = wsb.mentions > wsb.mentions24hAgo ? '📈' : (wsb.mentions < wsb.mentions24hAgo ? '📉' : '➡️');
     const rankText = wsb.rank ? `Rank #${wsb.rank} · ` : '';
-    const redditUrl = `https://www.reddit.com/r/wallstreetbets/search/?q=${encodeURIComponent(displayTicker)}&restrict_sr=1&sort=new`;
+    const redditUrl = `https://www.reddit.com/r/wallstreetbets/search/?q=${encodeURIComponent(`title:${displayTicker}`)}&restrict_sr=1&sort=relevance`;
     return `<a class="wsb-badge" href="${redditUrl}" target="_blank" rel="noopener noreferrer">`
       + `🚀 ${rankText}${wsb.mentions} mentions ${trend} · ${wsb.upvotes} upvotes</a>`;
   })() : '';
