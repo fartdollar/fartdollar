@@ -208,10 +208,19 @@
           code: code, key: key, keyCode: keyCode, which: keyCode, bubbles: true, cancelable: true,
         }));
       };
-      btn.addEventListener('pointerdown', function (e) { e.preventDefault(); fire('keydown'); });
+      btn.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        // Locks this pointer to the button regardless of small finger drift
+        // off its visual edge — without this, natural touch jitter fires
+        // pointerleave almost immediately, releasing movement keys before
+        // the game can actually move you (fire still "works" since it
+        // doesn't need to be held, which was masking this).
+        btn.setPointerCapture(e.pointerId);
+        fire('keydown');
+      });
       btn.addEventListener('pointerup', function (e) { e.preventDefault(); fire('keyup'); });
       btn.addEventListener('pointercancel', function () { fire('keyup'); });
-      btn.addEventListener('pointerleave', function () { fire('keyup'); });
+      btn.addEventListener('lostpointercapture', function () { fire('keyup'); });
     });
 
     document.getElementById('canvas').addEventListener('pointerdown', function () {
