@@ -220,17 +220,37 @@
       Module.setStatus('Error: ' + (e.reason && e.reason.message || e.reason));
     });
 
-    var engineScript = document.createElement('script');
-    // Without this, a cross-origin script's runtime errors get reported to
-    // window.onerror as an opaque "Script error." with no message/line/file
-    // — exactly what we were seeing — even though the Worker already sends
-    // the CORS header this needs to unlock the real detail.
-    engineScript.crossOrigin = 'anonymous';
-    engineScript.src = DOOM_PROXY + 'doom1.js';
-    engineScript.onerror = function () {
-      Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
-    };
-    document.body.appendChild(engineScript);
+    // Emscripten's own wasm-fetch logic (streaming, then a sync-XHR
+    // fallback) was failing with a generic "both async and sync fetching
+    // of the wasm failed" abort and no further detail. Fetching the bytes
+    // ourselves and handing them to Module.wasmBinary makes Emscripten skip
+    // its internal fetch entirely — and if this fetch fails instead, our
+    // own .catch() shows the real HTTP status/network error instead of
+    // Emscripten's generic abort message.
+    Module.setStatus('Fetching engine…');
+    fetch(DOOM_PROXY + 'doom1.wasm')
+      .then(function (res) {
+        if (!res.ok) throw new Error('doom1.wasm fetch failed: HTTP ' + res.status);
+        return res.arrayBuffer();
+      })
+      .then(function (bytes) {
+        Module.wasmBinary = bytes;
+
+        var engineScript = document.createElement('script');
+        // Without this, a cross-origin script's runtime errors get reported
+        // to window.onerror as an opaque "Script error." with no
+        // message/line/file — even though the Worker already sends the
+        // CORS header this needs to unlock the real detail.
+        engineScript.crossOrigin = 'anonymous';
+        engineScript.src = DOOM_PROXY + 'doom1.js';
+        engineScript.onerror = function () {
+          Module.setStatus('Error: failed to load the game engine script (' + engineScript.src + ')');
+        };
+        document.body.appendChild(engineScript);
+      })
+      .catch(function (err) {
+        Module.setStatus('Error: ' + err.message);
+      });
   </script>
 </body>
 </html>
